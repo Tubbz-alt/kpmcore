@@ -26,20 +26,21 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
-#include <QtGlobal>
 #include <QThread>
 #include <QVariant>
 
 #include <memory>
 
-namespace KAuth { class ExecuteJob; }
+namespace Auth { class PolkitQt1Backend; }
 
-class KJob;
+//namespace KAuth { class ExecuteJob; }
 
 class Report;
 class CopySource;
 class CopyTarget;
 class QDBusInterface;
+
+class KJob;
 
 struct ExternalCommandPrivate;
 
@@ -144,7 +145,8 @@ private:
     std::unique_ptr<ExternalCommandPrivate> d;
 
     // KAuth
-    static KAuth::ExecuteJob *m_job;
+    //static KAuth::ExecuteJob *m_job;
+    static Auth::PolkitQt1Backend *m_authJob;
     static bool helperStarted;
     static QWidget *parent;
 };

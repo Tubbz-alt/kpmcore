@@ -26,6 +26,7 @@
 #include "core/copytargetdevice.h"
 #include "util/globallog.h"
 #include "util/externalcommand.h"
+#include "util/externalcommand_polkitbackend.h"
 #include "util/report.h"
 
 #include "externalcommandhelper_interface.h"
@@ -39,9 +40,11 @@
 #include <QTimer>
 #include <QVariant>
 
-#include <KAuth>
+//#include <KAuth>
 #include <KJob>
 #include <KLocalizedString>
+
+#include <PolkitQt1/Authority>
 
 struct ExternalCommandPrivate
 {
@@ -55,7 +58,8 @@ struct ExternalCommandPrivate
     QProcess::ProcessChannelMode processChannelMode;
 };
 
-KAuth::ExecuteJob* ExternalCommand::m_job;
+//KAuth::ExecuteJob* ExternalCommand::m_job;
+Auth::PolkitQt1Backend* ExternalCommand::m_authJob;
 bool ExternalCommand::helperStarted = false;
 QWidget* ExternalCommand::parent;
 
@@ -72,6 +76,8 @@ ExternalCommand::ExternalCommand(const QString& cmd, const QStringList& args, co
     d->m_ExitCode = -1;
     d->m_Output = QByteArray();
 
+    m_authJob = new Auth::PolkitQt1Backend;
+    
     if (!helperStarted)
         if(!startHelper())
             Log(Log::Level::error) << xi18nc("@info:status", "Could not obtain administrator privileges.");
@@ -178,8 +184,8 @@ bool ExternalCommand::copyBlocks(const CopySource& source, CopyTarget& target)
     }
 
     // TODO KF6:Use new signal-slot syntax
-    connect(m_job, SIGNAL(percent(KJob*, unsigned long)), this, SLOT(emitProgress(KJob*, unsigned long)));
-    connect(m_job, &KAuth::ExecuteJob::newData, this, &ExternalCommand::emitReport);
+    /*connect(m_job, SIGNAL(percent(KJob*, unsigned long)), this, SLOT(emitProgress(KJob*, unsigned long)));
+    connect(m_job, &KAuth::ExecuteJob::newData, this, &ExternalCommand::emitReport);*/
 
     auto interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
                 QStringLiteral("/Helper"), QDBusConnection::systemBus(), this);
@@ -349,6 +355,7 @@ bool ExternalCommand::startHelper()
     }
     
     QDBusInterface iface(QStringLiteral("org.kde.kpmcore.helperinterface"), QStringLiteral("/Helper"), QStringLiteral("org.kde.kpmcore.externalcommand"), QDBusConnection::systemBus());
+    
     if (iface.isValid()) {
         exit(0);
     }
@@ -356,7 +363,7 @@ bool ExternalCommand::startHelper()
     d->m_thread = new DBusThread;
     d->m_thread->start();
 
-    KAuth::Action action = KAuth::Action(QStringLiteral("org.kde.kpmcore.externalcommand.init"));
+    /*KAuth::Action action = KAuth::Action(QStringLiteral("org.kde.kpmcore.externalcommand.init"));
     action.setHelperId(QStringLiteral("org.kde.kpmcore.externalcommand"));
     action.setTimeout(10 * 24 * 3600 * 1000); // 10 days
     action.setParentWidget(parent);
@@ -371,7 +378,31 @@ bool ExternalCommand::startHelper()
     auto conn = QObject::connect(m_job, &KAuth::ExecuteJob::newData, exitLoop);
     QObject::connect(m_job, &KJob::finished, [=] () { if(m_job->error()) exitLoop(); } );
     loop.exec();
+    QObject::disconnect(conn);*/
+    
+    /** Authorize using Polkit backend **/  
+    
+    // initialize KDE Polkit daemon
+    m_authJob->initPolkitAgent(QStringLiteral("org.kde.kpmcore.externalcommand.init"), parent);
+
+    bool isActionAuthorized = m_authJob->authorizeAction(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
+    
+    auto authResult = m_authJob->actionStatus(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
+    
+    // Wait until ExternalCommand Helper is ready and sends signal(Connect to newData signal)
+    QEventLoop loop;
+    auto exitLoop = [&] () { loop.exit(); };
+    
+    ExternalCommand cmd;
+    auto conn = QObject::connect(&cmd, &ExternalCommand::newData, exitLoop);
+    
+    loop.exec();
+    
     QObject::disconnect(conn);
+
+    if (!isActionAuthorized  /*|| authResult == PolkitQt1::Authority::No || authResult == PolkitQt1::Authority::Unknown*/) {
+        qDebug() << "Unable to obtain Administrative privileges, the action can not be executed!!";
+    }
 
     helperStarted = true;
     return true;
