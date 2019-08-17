@@ -20,6 +20,7 @@ set(UTIL_SRC
     ${HelperInterface_SRCS}
     util/capacity.cpp
     util/externalcommand.cpp
+    util/externalcommand_polkitbackend.cpp
     util/globallog.cpp
     util/helpers.cpp
     util/htmlreport.cpp
@@ -30,6 +31,7 @@ set(UTIL_LIB_HDRS
     util/libpartitionmanagerexport.h
     util/capacity.h
     util/externalcommand.h
+    util/externalcommand_polkitbackend.h
     util/globallog.h
     util/helpers.h
     util/htmlreport.h
@@ -43,13 +45,14 @@ add_executable(kpmcore_externalcommand
 
 target_link_libraries(kpmcore_externalcommand
     qca-qt5
+    ${POLKITQT-1_LIBRARIES}
     Qt5::Core
     Qt5::DBus
     KF5::AuthCore
     KF5::I18n
 )
 
-install(TARGETS kpmcore_externalcommand DESTINATION ${KAUTH_HELPER_INSTALL_DIR})
+install( TARGETS kpmcore_externalcommand DESTINATION ${KAUTH_HELPER_INSTALL_DIR} )
 install( FILES util/org.kde.kpmcore.helperinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
 install( FILES util/org.kde.kpmcore.applicationinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
 

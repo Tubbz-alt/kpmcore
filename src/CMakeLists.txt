@@ -43,6 +43,7 @@ target_link_libraries( kpmcore PUBLIC
     Qt5::Core
     PRIVATE
     ${BLKID_LIBRARIES}
+    ${POLKITQT-1_LIBRARIES}
     Qt5::DBus
     Qt5::Gui
     qca-qt5
