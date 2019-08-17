@@ -1,6 +1,7 @@
 /*************************************************************************
  *  Copyright (C) 2008 by Volker Lanz <vl@fidra.de>                      *
  *  Copyright (C) 2016-2018 by Andrius Štikonas <andrius@stikonas.eu>    *
+ *  Copyright (C) 2019 by Shubham <aryan100jangid@gmail.com>             *
  *                                                                       *
  *  This program is free software; you can redistribute it and/or        *
  *  modify it under the terms of the GNU General Public License as       *
@@ -29,17 +30,13 @@
 
 #include "externalcommandhelper_interface.h"
 
-#include <QCryptographicHash>
-#include <QDBusConnection>
-#include <QDBusInterface>
-#include <QDBusReply>
+#include <QtDBus>
 #include <QEventLoop>
-#include <QtGlobal>
 #include <QStandardPaths>
 #include <QString>
 #include <QStringList>
-#include <QTimer>
 #include <QThread>
+#include <QTimer>
 #include <QVariant>
 
 #include <KAuth>
@@ -61,7 +58,6 @@ struct ExternalCommandPrivate
 KAuth::ExecuteJob* ExternalCommand::m_job;
 bool ExternalCommand::helperStarted = false;
 QWidget* ExternalCommand::parent;
-
 
 /** Creates a new ExternalCommand instance without Report.
     @param cmd the command to run
@@ -96,7 +92,6 @@ ExternalCommand::ExternalCommand(Report& report, const QString& cmd, const QStri
     d->m_Args = args;
     d->m_ExitCode = -1;
     d->m_Output = QByteArray();
-
     d->processChannelMode = processChannelMode;
 }
 
@@ -138,7 +133,7 @@ bool ExternalCommand::start(int timeout)
     if (cmd.isEmpty())
         cmd = QStandardPaths::findExecutable(command(), { QStringLiteral("/sbin/"), QStringLiteral("/usr/sbin/"), QStringLiteral("/usr/local/sbin/") });
 
-    auto *interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
+    auto interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
                     QStringLiteral("/Helper"), QDBusConnection::systemBus(), this);
 
     interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
@@ -186,7 +181,7 @@ bool ExternalCommand::copyBlocks(const CopySource& source, CopyTarget& target)
     connect(m_job, SIGNAL(percent(KJob*, unsigned long)), this, SLOT(emitProgress(KJob*, unsigned long)));
     connect(m_job, &KAuth::ExecuteJob::newData, this, &ExternalCommand::emitReport);
 
-    auto *interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
+    auto interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
                 QStringLiteral("/Helper"), QDBusConnection::systemBus(), this);
     interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
 
@@ -274,8 +269,8 @@ bool ExternalCommand::run(int timeout)
     return start(timeout) /* && exitStatus() == 0*/;
 }
 
-void ExternalCommand::onReadOutput()
-{
+//void ExternalCommand::onReadOutput()
+//{
 //     const QByteArray s = readAllStandardOutput();
 //
 //     if(m_Output.length() > 10*1024*1024) { // prevent memory overflow for badly corrupted file systems
@@ -288,7 +283,7 @@ void ExternalCommand::onReadOutput()
 //
 //     if (report())
 //         *report() << QString::fromLocal8Bit(s);
-}
+//}
 
 void ExternalCommand::setCommand(const QString& cmd)
 {
@@ -340,7 +335,7 @@ void ExternalCommand::setExitCode(int i)
     d->m_ExitCode = i;
 }
 
-/**< Dummy function for QTimer when needed. */
+/**< Dummy function for QTimer */
 void ExternalCommand::quit()
 {
     
@@ -384,10 +379,22 @@ bool ExternalCommand::startHelper()
 
 void ExternalCommand::stopHelper()
 {
-    auto *interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
+    auto interface = new org::kde::kpmcore::externalcommand(QStringLiteral("org.kde.kpmcore.externalcommand"),
                                                              QStringLiteral("/Helper"), QDBusConnection::systemBus());
     interface->exit();
 
+}
+
+void ExternalCommand::emitNewData(int percent)
+{
+    Q_UNUSED(percent)
+    emit newData();
+}
+
+void ExternalCommand::emitNewData(QString message)
+{
+    Q_UNUSED(message)
+    emit newData();
 }
 
 void DBusThread::run()

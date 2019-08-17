@@ -1,6 +1,7 @@
 /*************************************************************************
  *  Copyright (C) 2008 by Volker Lanz <vl@fidra.de>                      *
  *  Copyright (C) 2016-2018 by Andrius Štikonas <andrius@stikonas.eu>    *
+ *  Copyright (C) 2019 by Shubham <aryan100jangid@gmail.com>             *
  *                                                                       *
  *  This program is free software; you can redistribute it and/or        *
  *  modify it under the terms of the GNU General Public License as       *
@@ -34,6 +35,7 @@
 namespace KAuth { class ExecuteJob; }
 
 class KJob;
+
 class Report;
 class CopySource;
 class CopyTarget;
@@ -44,9 +46,8 @@ struct ExternalCommandPrivate;
 class DBusThread : public QThread
 {
     Q_OBJECT
-    // We register on DBus so the helper can monitor us and terminate if we
-    // terminate.
-    Q_CLASSINFO("D-Bus Interface", "org.kde.kpmcore.applicationinterface")
+    
+private:
     void run() override;
 };
 
@@ -60,6 +61,8 @@ class DBusThread : public QThread
 class LIBKPMCORE_EXPORT ExternalCommand : public QObject
 {
     Q_OBJECT
+    // We register on DBus so the helper can monitor us and terminate if we terminate.
+    Q_CLASSINFO("D-Bus Interface", "org.kde.kpmcore.applicationinterface")
     Q_DISABLE_COPY(ExternalCommand)
 
 public:
@@ -124,13 +127,18 @@ public:
 Q_SIGNALS:
     void progress(int);
     void reportSignal(const QVariantMap&);
+    
+    void newData();
 
 public Q_SLOTS:
     void emitProgress(KJob*, unsigned long percent) { emit progress(percent); }
+    
+    Q_SCRIPTABLE void emitNewData(int percent);
+    Q_SCRIPTABLE void emitNewData(QString message);
 
 private:
     void setExitCode(int i);
-    void onReadOutput();
+//  void onReadOutput();
 
 private:
     std::unique_ptr<ExternalCommandPrivate> d;
@@ -141,4 +149,4 @@ private:
     static QWidget *parent;
 };
 
-#endif
+#endif // KPMCORE_EXTERNALCOMMAND_H

@@ -17,14 +17,16 @@
  *************************************************************************/
 
 #include "externalcommandhelper.h"
+
+#include "externalcommand_interface.h"
 #include "externalcommand_whitelist.h"
 
-#include <QtDBus>
 #include <QCoreApplication>
+#include <QtDBus>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QString>
-#include <QTime>
 #include <QVariant>
 
 #include <KLocalizedString>
@@ -70,7 +72,7 @@ int ExternalCommandHelper::helperMain(int argc, char **argv)
     m_loop = std::make_unique<QEventLoop>();
 
     // We send zero percent new data on initial start-up
-    //sendProgress(0);
+    sendProgress(0);
     
     // QDBus Service watcher which keeps an eye on the client (Main GUI app)
     // End the loop and return only once the client has unregistered over the QDBus.
@@ -85,11 +87,12 @@ int ExternalCommandHelper::helperMain(int argc, char **argv)
     });
 
     m_loop->exec();
-    
+
     qApp->quit();
     
     return app.exec();
 }
+
 
 /** Reads the given number of bytes from the sourceDevice into the given buffer.
     @param sourceDevice device or file to read from
@@ -150,6 +153,62 @@ bool ExternalCommandHelper::writeData(const QString &targetDevice, const QByteAr
     return true;
 }
 
+/** Sends progress to the main application in terms of percentage.
+    @param percent Percent of job completed.
+*/
+void ExternalCommandHelper::sendProgress(int percent)
+{
+    auto *interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
+                                                                 QStringLiteral("/Application"), QDBusConnection::systemBus(), this);
+    interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
+ 
+    QDBusPendingCall pcall = interface->emitNewData(percent);
+
+    QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pcall, this);
+    QEventLoop loop;
+
+    auto exitLoop = [&] (QDBusPendingCallWatcher *watcher) {
+        loop.exit();
+        if (watcher->isError())
+            qWarning() << watcher->error();
+    };
+
+    connect(watcher, &QDBusPendingCallWatcher::finished, [this, exitLoop, watcher](){
+        watcher->deleteLater();
+    }
+    );
+    
+    loop.exec();
+}
+
+/** Sends progress to the main application in terms of string message.
+    @param message Message to send to the main application.
+*/
+void ExternalCommandHelper::sendProgress(QString message)
+{    
+    auto *interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
+                                                                 QStringLiteral("/Application"), QDBusConnection::systemBus(), this);
+    interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
+ 
+    QDBusPendingCall pcall = interface->emitNewData(message);
+
+    QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(pcall, this);
+    QEventLoop loop;
+
+    auto exitLoop = [&] (QDBusPendingCallWatcher *watcher) {
+        loop.exit();
+        if (watcher->isError())
+            qWarning() << watcher->error();
+    };
+
+    connect(watcher, &QDBusPendingCallWatcher::finished, [this, exitLoop, watcher](){
+        watcher->deleteLater();
+    }
+    );
+    
+    loop.exec();
+}
+
 // If targetDevice is empty then return QByteArray with data that was read from disk.
 QVariantMap ExternalCommandHelper::copyblocks(const QString& sourceDevice, const qint64 sourceFirstByte, const qint64 sourceLength, const QString& targetDevice, const qint64 targetFirstByte, const qint64 blockSize)
 {
@@ -174,18 +233,17 @@ QVariantMap ExternalCommandHelper::copyblocks(const QString& sourceDevice, const
 
     QByteArray buffer;
     int percent = 0;
-    QTime t;
 
+    
+    QElapsedTimer t;
     t.start();
 
-    QVariantMap report;
+    sendProgress(xi18nc("@info:progress", "Copying %1 blocks (%2 bytes) from %3 to %4, direction: %5.", blocksToCopy,
 
-    report[QStringLiteral("report")] = xi18nc("@info:progress", "Copying %1 blocks (%2 bytes) from %3 to %4, direction: %5.", blocksToCopy,
-                                              sourceLength, readOffset, writeOffset, copyDirection == 1 ? i18nc("direction: left", "left")
-                                              : i18nc("direction: right", "right"));
 
-    HelperSupport::progressStep(report);
-
+                                                sourceLength, readOffset, writeOffset, copyDirection == 1 ? i18nc("direction: left", "left")
+                                                : i18nc("direction: right", "right")));
+    
     bool rval = true;
 
     while (blocksCopied < blocksToCopy && !targetDevice.isEmpty()) {
@@ -203,10 +261,11 @@ QVariantMap ExternalCommandHelper::copyblocks(const QString& sourceDevice, const
             if (percent % 5 == 0 && t.elapsed() > 1000) {
                 const qint64 mibsPerSec = (blocksCopied * blockSize / 1024 / 1024) / (t.elapsed() / 1000);
                 const qint64 estSecsLeft = (100 - percent) * t.elapsed() / percent / 1000;
-                report[QStringLiteral("report")]=  xi18nc("@info:progress", "Copying %1 MiB/second, estimated time left: %2", mibsPerSec, QTime(0, 0).addSecs(estSecsLeft).toString());
-                HelperSupport::progressStep(report);
+
+                sendProgress(xi18nc("@info:progress", "Copying %1 MiB/second, estimated time left: %2", mibsPerSec, QTime(0, 0).addSecs(estSecsLeft).toString()));
+                
             }
-            HelperSupport::progressStep(percent);
+            sendProgress(percent);
         }
     }
 
@@ -216,8 +275,9 @@ QVariantMap ExternalCommandHelper::copyblocks(const QString& sourceDevice, const
 
         const qint64 lastBlockReadOffset = copyDirection > 0 ? readOffset + blockSize * blocksCopied : sourceFirstByte;
         const qint64 lastBlockWriteOffset = copyDirection > 0 ? writeOffset + blockSize * blocksCopied : targetFirstByte;
-        report[QStringLiteral("report")]= xi18nc("@info:progress", "Copying remainder of block size %1 from %2 to %3.", lastBlock, lastBlockReadOffset, lastBlockWriteOffset);
-        HelperSupport::progressStep(report);
+
+        sendProgress(xi18nc("@info:progress", "Copying remainder of block size %1 from %2 to %3.", lastBlock, lastBlockReadOffset, lastBlockWriteOffset));
+                
         rval = readData(sourceDevice, buffer, lastBlockReadOffset, lastBlock);
 
         if (rval) {
@@ -228,14 +288,13 @@ QVariantMap ExternalCommandHelper::copyblocks(const QString& sourceDevice, const
         }
 
         if (rval) {
-            HelperSupport::progressStep(100);
+            sendProgress(100);
             bytesWritten += buffer.size();
         }
     }
-
-    report[QStringLiteral("report")] = xi18ncp("@info:progress argument 2 is a string such as 7 bytes (localized accordingly)", "Copying 1 block (%2) finished.", "Copying %1 blocks (%2) finished.", blocksCopied, i18np("1 byte", "%1 bytes", bytesWritten));
-    HelperSupport::progressStep(report);
-
+    
+    sendProgress(xi18ncp("@info:progress argument 2 is a string such as 7 bytes (localized accordingly)", "Copying 1 block (%2) finished.", "Copying %1 blocks (%2) finished.", blocksCopied, i18np("1 byte", "%1 bytes", bytesWritten)));
+    
     reply[QStringLiteral("success")] = rval;
     return reply;
 }
@@ -264,7 +323,7 @@ QVariantMap ExternalCommandHelper::start(const QString& command, const QStringLi
     // Compare with command whitelist
     QString basename = command.mid(command.lastIndexOf(QLatin1Char('/')) + 1);
     if (std::find(std::begin(allowedCommands), std::end(allowedCommands), basename) == std::end(allowedCommands)) {
-        qInfo() << command <<" command is not one of the whitelisted command";
+        qInfo() << command <<"Command is not one of the whitelisted command";
         m_loop->exit();
         reply[QStringLiteral("success")] = false;
         return reply;
@@ -278,7 +337,9 @@ QVariantMap ExternalCommandHelper::start(const QString& command, const QStringLi
     m_cmd.write(input);
     m_cmd.closeWriteChannel();
     m_cmd.waitForFinished(-1);
+    
     QByteArray output = m_cmd.readAllStandardOutput();
+    
     reply[QStringLiteral("output")] = output;
     reply[QStringLiteral("exitCode")] = m_cmd.exitCode();
 
@@ -297,7 +358,7 @@ void ExternalCommandHelper::exit()
 {
     const QByteArray s = cmd.readAllStandardOutput();
 
-    if(output.length() > 10*1024*1024) { // prevent memory overflow for badly corrupted file systems
+      if(output.length() > 10*1024*1024) { // prevent memory overflow for badly corrupted file systems
         if (report())
             report()->line() << xi18nc("@info:status", "(Command is printing too much output)");
             return;
@@ -308,7 +369,5 @@ void ExternalCommandHelper::exit()
      if (report())
          *report() << QString::fromLocal8Bit(s);
 }*/
-
-//KAUTH_HELPER_MAIN("org.kde.kpmcore.externalcommand", ExternalCommandHelper)
 
 HELPER_MAIN()

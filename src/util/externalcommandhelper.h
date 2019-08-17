@@ -22,8 +22,6 @@
 #include <memory>
 #include <unordered_set>
 
-#include <KAuth>
-
 #include <QEventLoop>
 #include <QProcess>
 #include <QString>
@@ -32,22 +30,18 @@
 #define HELPER_MAIN() \
     int main(int argc, char **argv) { ExternalCommandHelper helper; return helper.helperMain(argc, argv); }
 
-using namespace KAuth;
-
 class ExternalCommandHelper : public QObject
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.kde.kpmcore.externalcommand")
-
-Q_SIGNALS:
-    void progress(int);
-    void quit();
-
+    
 public:
     bool readData(const QString& sourceDevice, QByteArray& buffer, const qint64 offset, const qint64 size);
     bool writeData(const QString& targetDevice, const QByteArray& buffer, const qint64 offset);
+    void sendProgress(int percent);
+    void sendProgress(QString message);
     int helperMain(int argc, char **argv);
-
+    
 public Q_SLOTS:
     Q_SCRIPTABLE QVariantMap start(const QString& command, const QStringList& arguments, const QByteArray& input, const int processChannelMode);
     Q_SCRIPTABLE QVariantMap copyblocks(const QString& sourceDevice, const qint64 sourceFirstByte, const qint64 sourceLength, const QString& targetDevice, const qint64 targetFirstByte, const qint64 blockSize);
@@ -59,7 +53,7 @@ private:
     QProcess m_cmd;
     
 //  QByteArray output;
-//  void onReadOutput();
+//  void onReadOutput();    
 };
 
 #endif // KPMCORE_EXTERNALCOMMANDHELPER_H
