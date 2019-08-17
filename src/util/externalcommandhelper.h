@@ -1,5 +1,6 @@
 /*************************************************************************
  *  Copyright (C) 2017-2018 by Andrius Štikonas <andrius@stikonas.eu>    *
+ *  Copyright (C) 2019 by Shubham <aryan100jangid@gmail.com>             *
  *                                                                       *
  *  This program is free software; you can redistribute it and/or        *
  *  modify it under the terms of the GNU General Public License as       *
@@ -24,8 +25,12 @@
 #include <KAuth>
 
 #include <QEventLoop>
-#include <QString>
 #include <QProcess>
+#include <QString>
+#include <QVariant>
+
+#define HELPER_MAIN() \
+    int main(int argc, char **argv) { ExternalCommandHelper helper; return helper.helperMain(argc, argv); }
 
 using namespace KAuth;
 
@@ -41,20 +46,20 @@ Q_SIGNALS:
 public:
     bool readData(const QString& sourceDevice, QByteArray& buffer, const qint64 offset, const qint64 size);
     bool writeData(const QString& targetDevice, const QByteArray& buffer, const qint64 offset);
+    int helperMain(int argc, char **argv);
 
 public Q_SLOTS:
-    ActionReply init(const QVariantMap& args);
     Q_SCRIPTABLE QVariantMap start(const QString& command, const QStringList& arguments, const QByteArray& input, const int processChannelMode);
     Q_SCRIPTABLE QVariantMap copyblocks(const QString& sourceDevice, const qint64 sourceFirstByte, const qint64 sourceLength, const QString& targetDevice, const qint64 targetFirstByte, const qint64 blockSize);
     Q_SCRIPTABLE bool writeData(const QByteArray& buffer, const QString& targetDevice, const qint64 targetFirstByte);
     Q_SCRIPTABLE void exit();
 
 private:
-    void onReadOutput();
-
     std::unique_ptr<QEventLoop> m_loop;
     QProcess m_cmd;
+    
 //  QByteArray output;
+//  void onReadOutput();
 };
 
-#endif
+#endif // KPMCORE_EXTERNALCOMMANDHELPER_H

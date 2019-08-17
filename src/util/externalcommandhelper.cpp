@@ -1,5 +1,6 @@
 /*************************************************************************
  *  Copyright (C) 2017-2018 by Andrius Štikonas <andrius@stikonas.eu>    *
+ *  Copyright (C) 2019 by Shubham <aryan100jangid@gmail.com>             *
  *                                                                       *
  *  This program is free software; you can redistribute it and/or        *
  *  modify it under the terms of the GNU General Public License as       *
@@ -42,50 +43,53 @@
  * command execution requests from the application that started the helper.
  * 
 */
-ActionReply ExternalCommandHelper::init(const QVariantMap& args)
-{
-    Q_UNUSED(args)
-    
-    ActionReply reply;
 
-    if (!QDBusConnection::systemBus().isConnected() || !QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.helperinterface")) || 
-        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots)) {
+/** Reads the given number of bytes from the sourceDevice into the given buffer.
+    @param argc argument count
+    @param argv argument vector
+    @return zero on success, non-zero on failure
+*/
+int ExternalCommandHelper::helperMain(int argc, char **argv)
+{
+    QCoreApplication app(argc, argv);
+    
+    if (!QDBusConnection::systemBus().isConnected() || 
+        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots) ||
+        !QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.helperinterface")) || 
+        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Application"), this, QDBusConnection::ExportAllSlots) ||
+        !QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.applicationinterface"))) {
+        qDebug()   << "Failed to initialize the Helper";
         qWarning() << QDBusConnection::systemBus().lastError().message();
-        reply.addData(QStringLiteral("success"), false);
-    
-        // Also end the application loop started by KAuth's main() code. Our loop
-        // exits when our client disappears. Without client we have no reason to
-        // live.
+
+        // We have no reason to live when Main GUI app has expired
         qApp->quit();
-    
-        return reply;
+
+        return app.exec();
     }
     
     m_loop = std::make_unique<QEventLoop>();
-    HelperSupport::progressStep(QVariantMap());
 
-    // End the loop and return only once the client is done using us.
-    auto serviceWatcher =
-            new QDBusServiceWatcher(QStringLiteral("org.kde.kpmcore.applicationinterface"),
-                                    QDBusConnection::systemBus(),
-                                    QDBusServiceWatcher::WatchForUnregistration,
-                                    this);
+    // We send zero percent new data on initial start-up
+    //sendProgress(0);
+    
+    // QDBus Service watcher which keeps an eye on the client (Main GUI app)
+    // End the loop and return only once the client has unregistered over the QDBus.
+    auto serviceWatcher = new QDBusServiceWatcher(QStringLiteral("org.kde.kpmcore.applicationinterface"),
+                                                  QDBusConnection::systemBus(),
+                                                  QDBusServiceWatcher::WatchForUnregistration,
+                                                  this);
+    
     connect(serviceWatcher, &QDBusServiceWatcher::serviceUnregistered,
             [this]() {
         m_loop->exit();
     });
 
     m_loop->exec();
-    reply.addData(QStringLiteral("success"), true);
-
-    // Also end the application loop started by KAuth's main() code. Our loop
-    // exits when our client disappears. Without client we have no reason to
-    // live.
+    
     qApp->quit();
-
-    return reply;
+    
+    return app.exec();
 }
-
 
 /** Reads the given number of bytes from the sourceDevice into the given buffer.
     @param sourceDevice device or file to read from
@@ -289,11 +293,11 @@ void ExternalCommandHelper::exit()
     QDBusConnection::systemBus().unregisterService(QStringLiteral("org.kde.kpmcore.helperinterface"));
 }
 
-void ExternalCommandHelper::onReadOutput()
+/*void ExternalCommandHelper::onReadOutput()
 {
-/*    const QByteArray s = cmd.readAllStandardOutput();
+    const QByteArray s = cmd.readAllStandardOutput();
 
-      if(output.length() > 10*1024*1024) { // prevent memory overflow for badly corrupted file systems
+    if(output.length() > 10*1024*1024) { // prevent memory overflow for badly corrupted file systems
         if (report())
             report()->line() << xi18nc("@info:status", "(Command is printing too much output)");
             return;
@@ -302,7 +306,7 @@ void ExternalCommandHelper::onReadOutput()
      output += s;
 
      if (report())
-         *report() << QString::fromLocal8Bit(s);*/
-}
+         *report() << QString::fromLocal8Bit(s);
+}*/
 
 KAUTH_HELPER_MAIN("org.kde.kpmcore.externalcommand", ExternalCommandHelper)
