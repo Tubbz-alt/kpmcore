@@ -31,7 +31,7 @@
 
 /** Initialize ExternalCommandHelper Daemon and prepare DBus interface
  *
- * KAuth helper runs in the background until application exits.
+ * Helper runs in the background until application exits.
  * To avoid forever running helper in case of application crash
  * ExternalCommand class opens a DBus service that we monitor for changes.
  * If helper is not busy then it exits when the client services gets
@@ -309,4 +309,6 @@ void ExternalCommandHelper::exit()
          *report() << QString::fromLocal8Bit(s);
 }*/
 
-KAUTH_HELPER_MAIN("org.kde.kpmcore.externalcommand", ExternalCommandHelper)
+//KAUTH_HELPER_MAIN("org.kde.kpmcore.externalcommand", ExternalCommandHelper)
+
+HELPER_MAIN()
