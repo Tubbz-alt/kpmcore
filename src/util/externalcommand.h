@@ -33,8 +33,6 @@
 
 namespace Auth { class PolkitQt1Backend; }
 
-//namespace KAuth { class ExecuteJob; }
-
 class Report;
 class CopySource;
 class CopyTarget;
@@ -144,8 +142,7 @@ private:
 private:
     std::unique_ptr<ExternalCommandPrivate> d;
 
-    // KAuth
-    //static KAuth::ExecuteJob *m_job;
+    // Authorize using Polkit backend
     static Auth::PolkitQt1Backend *m_authJob;
     static bool helperStarted;
     static QWidget *parent;

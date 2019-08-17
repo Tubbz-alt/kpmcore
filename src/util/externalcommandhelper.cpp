@@ -158,7 +158,7 @@ bool ExternalCommandHelper::writeData(const QString &targetDevice, const QByteAr
 */
 void ExternalCommandHelper::sendProgress(int percent)
 {
-    auto *interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
+    auto interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
                                                                  QStringLiteral("/Application"), QDBusConnection::systemBus(), this);
     interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
  
@@ -186,7 +186,7 @@ void ExternalCommandHelper::sendProgress(int percent)
 */
 void ExternalCommandHelper::sendProgress(QString message)
 {    
-    auto *interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
+    auto interface = new org::kde::kpmcore::applicationinterface(QStringLiteral("org.kde.kpmcore.applicationinterface"),
                                                                  QStringLiteral("/Application"), QDBusConnection::systemBus(), this);
     interface->setTimeout(10 * 24 * 3600 * 1000); // 10 days
  
@@ -307,7 +307,6 @@ bool ExternalCommandHelper::writeData(const QByteArray& buffer, const QString& t
 
     return writeData(targetDevice, buffer, targetFirstByte);
 }
-
 
 QVariantMap ExternalCommandHelper::start(const QString& command, const QStringList& arguments, const QByteArray& input, const int processChannelMode)
 {

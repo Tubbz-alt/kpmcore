@@ -151,7 +151,7 @@ bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &
         authority->clearError();
     }
     
-    if (/*event.result()*/ /*PolkitEventLoop::m_result*/ actionStatus(action, callerID) == Authority::Yes) {
+    if (/*event.result() PolkitEventLoop::m_result*/ actionStatus(action, callerID) == Authority::Yes) {
         return true;
     } else {
         return false;
