@@ -53,7 +53,6 @@ struct ExternalCommandPrivate
     int m_ExitCode;
     QByteArray m_Output;
     QByteArray m_Input;
-    DBusThread *m_thread;
     QProcess::ProcessChannelMode processChannelMode;
 };
 
@@ -355,15 +354,16 @@ bool ExternalCommand::startHelper()
     if (iface.isValid()) {
         exit(0);
     }
-
-    d->m_thread = new DBusThread;
-    d->m_thread->start();
-
+    
     /** Authorize using Polkit backend **/  
     
     // initialize KDE Polkit daemon
     m_authJob->initPolkitAgent(QStringLiteral("org.kde.kpmcore.externalcommand.init"), parent);
 
+    // initialize and kick start the helper application
+    m_authJob->initHelper(QStringLiteral("org.kde.kpmcore.helperinterface"));
+    m_authJob->startHelper(QStringLiteral("org.kde.kpmcore.externalcommand.init"), QStringLiteral("org.kde.kpmcore.helperinterface"));
+    
     bool isActionAuthorized = m_authJob->authorizeAction(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
     
     auto authResult = m_authJob->actionStatus(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
@@ -405,16 +405,4 @@ void ExternalCommand::emitNewData(QString message)
 {
     Q_UNUSED(message)
     emit newData();
-}
-
-void DBusThread::run()
-{
-    if (!QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.applicationinterface")) || 
-        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Application"), this, QDBusConnection::ExportAllSlots)) {
-        qWarning() << QDBusConnection::systemBus().lastError().message();
-        return;
-    }
-        
-    QEventLoop loop;
-    loop.exec();
 }

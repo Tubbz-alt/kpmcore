@@ -58,6 +58,24 @@ public:
    ~PolkitQt1Backend();
     
     /**
+     * \brief A function to check for the action's current status.
+     * 
+     * \param name Helper service name
+     *
+     * \return true if helper is initialized, otherwise false.
+     */
+     bool initHelper(const QString &helperName);
+     
+    /**
+     * \brief A function to check for the action's current status.
+     * 
+     * \param action Action name
+     * \param helperID Helper service name
+     * 
+     */
+     void startHelper(const QString &action, const QString &helperID, int timeout = 10 * 24 * 3600 * 1000 /*10 days*/);
+   
+    /**
      * \brief Initializes the KDE Polkit Authentication Agent.
      * 
      * \param action Action in question

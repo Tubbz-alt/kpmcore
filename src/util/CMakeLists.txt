@@ -48,13 +48,13 @@ target_link_libraries(kpmcore_externalcommand
     ${POLKITQT-1_LIBRARIES}
     Qt5::Core
     Qt5::DBus
-    KF5::AuthCore
     KF5::I18n
 )
 
 install( TARGETS kpmcore_externalcommand DESTINATION ${KAUTH_HELPER_INSTALL_DIR} )
 install( FILES util/org.kde.kpmcore.helperinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
 install( FILES util/org.kde.kpmcore.applicationinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
+install( FILES util/org.kde.kpmcore.externalcommand.service DESTINATION ${DBUS_SYSTEM_SERVICES_INSTALL_DIR} )
 
-kauth_install_helper_files(kpmcore_externalcommand org.kde.kpmcore.externalcommand root)
+# We do not link to KF5::AuthCore because we just have build-time dependency on it
 kauth_install_actions(org.kde.kpmcore.externalcommand util/org.kde.kpmcore.externalcommand.actions)

@@ -33,22 +33,13 @@
 
 namespace Auth { class PolkitQt1Backend; }
 
-class Report;
 class CopySource;
 class CopyTarget;
+class Report;
 class QDBusInterface;
-
 class KJob;
 
 struct ExternalCommandPrivate;
-
-class DBusThread : public QThread
-{
-    Q_OBJECT
-    
-private:
-    void run() override;
-};
 
 /** An external command.
 

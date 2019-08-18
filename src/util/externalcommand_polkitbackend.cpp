@@ -18,9 +18,8 @@
 #include "util/externalcommand_polkitbackend.h"
 
 #include <QApplication>
+#include <QtDBus>
 #include <QDebug>
-#include <QDBusConnection>
-#include <QDBusConnectionInterface>
 #include <QEventLoop>
 #include <QString>
 #include <QTimer>
@@ -66,7 +65,43 @@ PolkitQt1Backend::~PolkitQt1Backend()
 {
     
 }
+
+bool PolkitQt1Backend::initHelper(const QString &helperName)
+{
+    if (!QDBusConnection::systemBus().isConnected() || 
+        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots) ||
+        !QDBusConnection::systemBus().registerService(helperName)) {
+        qWarning() << "Helper initialization failed!!" << QDBusConnection::systemBus().lastError().message();
+        return false;
+    }
+
+    return true;
+}
     
+void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID, int timeout /*10 days*/)
+{
+    QDBusMessage message = QDBusMessage::createMethodCall(helperID, QStringLiteral("/Helper"), QStringLiteral("org.kde.kpmcore.externalcommand"), QStringLiteral("performAction"));
+
+    const QByteArray caller = QDBusConnection::systemBus().baseService().toUtf8();
+    QList<QVariant> args;
+    args << action << caller;
+    message.setArguments(args);
+
+    QDBusPendingCall pendingCall = QDBusConnection::systemBus().asyncCall(message, timeout);
+
+    auto watcher = new QDBusPendingCallWatcher(pendingCall);
+
+    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, action, watcher]() {
+        watcher->deleteLater();
+
+        const QDBusMessage reply = watcher->reply();
+
+        if (reply.type() == QDBusMessage::ErrorMessage) {
+            qWarning() << "Failed to contact the helper, Error message:" << reply.errorMessage();
+        }
+    });
+}
+
 void PolkitQt1Backend::initPolkitAgent(const QString &action, QWidget *parent /*= nullptr*/) const
 {
     if (!parent) {
@@ -85,8 +120,8 @@ void PolkitQt1Backend::initPolkitAgent(const QString &action, QWidget *parent /*
     quint64 parentWindowID = parent->effectiveWinId();
     
     // Make a call to the KDE polkit Authentication Agent asking for it's services
-    QDBusMessage callAgent = QDBusMessage::createMethodCall(QLatin1String("org.kde.polkit-kde-authentication-agent-1"), QLatin1String("/org/kde/Polkit1AuthAgent"), QLatin1String("org.kde.Polkit1AuthAgent"),
-                                                            QLatin1String("setWIdForAction"));
+    QDBusMessage callAgent = QDBusMessage::createMethodCall(QStringLiteral("org.kde.polkit-kde-authentication-agent-1"), QStringLiteral("/org/kde/Polkit1AuthAgent"), QStringLiteral("org.kde.Polkit1AuthAgent"),
+                                                            QStringLiteral("setWIdForAction"));
 
     callAgent << action;
     callAgent << parentWindowID;
