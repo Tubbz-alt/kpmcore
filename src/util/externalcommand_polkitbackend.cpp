@@ -46,6 +46,12 @@ PolkitEventLoop::~PolkitEventLoop()
     
 }
 
+void PolkitEventLoop::requestQuit(const Authority::Result &result)
+{
+    m_result = result;
+    quit();
+}
+
 Authority::Result PolkitEventLoop::result() const
 {
     return m_result;
@@ -164,8 +170,6 @@ QByteArray PolkitQt1Backend::callerID() const
 
 bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &callerID)
 {
-    // Set m_result here, otherwise there will be wrong log message displayed inside externalcommand.cpp line 383
-    
     SystemBusNameSubject subject(QString::fromUtf8(callerID));
     
     auto authority = Authority::instance();
@@ -173,7 +177,7 @@ bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &
     PolkitEventLoop event;
     event.processEvents();
     
-    connect(authority, &Authority::checkAuthorizationFinished, &event, &PolkitEventLoop::quit);
+    connect(authority, &Authority::checkAuthorizationFinished, &event, &PolkitEventLoop::requestQuit);
     authority->checkAuthorization(action, subject, Authority::AllowUserInteraction);
     
     event.exec();
@@ -186,7 +190,7 @@ bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &
         authority->clearError();
     }
     
-    if (/*event.result() PolkitEventLoop::m_result*/ actionStatus(action, callerID) == Authority::Yes) {
+    if (event.result() /*PolkitEventLoop::m_result*/ == Authority::Yes) {
         return true;
     } else {
         return false;

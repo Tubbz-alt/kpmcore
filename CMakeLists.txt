@@ -64,6 +64,7 @@ find_package(Qt5 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
   Widgets
 )
 
+# We do not link to KF5::AuthCore because we just have build-time dependency on it
 # Load the frameworks we need
 find_package(KF5 ${KF5_MIN_VERSION} REQUIRED
   Auth

@@ -366,8 +366,6 @@ bool ExternalCommand::startHelper()
     
     bool isActionAuthorized = m_authJob->authorizeAction(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
     
-    auto authResult = m_authJob->actionStatus(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
-    
     // Wait until ExternalCommand Helper is ready and sends signal(Connect to newData signal)
     QEventLoop loop;
     auto exitLoop = [&] () { loop.exit(); };
@@ -379,7 +377,7 @@ bool ExternalCommand::startHelper()
     
     QObject::disconnect(conn);
 
-    if (!isActionAuthorized  || authResult == PolkitQt1::Authority::No || authResult == PolkitQt1::Authority::Unknown) {
+    if (!isActionAuthorized) {
         qDebug() << "Unable to obtain Administrative privileges, the action can not be executed!!";
     }
 

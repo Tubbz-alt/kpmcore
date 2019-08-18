@@ -147,6 +147,9 @@ public:
    
     Authority::Result result() const;
     
+public Q_SLOTS:
+    void requestQuit(const PolkitQt1::Authority::Result &result);
+    
 public:
     static Authority::Result m_result;
 };

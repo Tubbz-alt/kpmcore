@@ -56,5 +56,4 @@ install( FILES util/org.kde.kpmcore.helperinterface.conf DESTINATION ${KDE_INSTA
 install( FILES util/org.kde.kpmcore.applicationinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
 install( FILES util/org.kde.kpmcore.externalcommand.service DESTINATION ${DBUS_SYSTEM_SERVICES_INSTALL_DIR} )
 
-# We do not link to KF5::AuthCore because we just have build-time dependency on it
 kauth_install_actions(org.kde.kpmcore.externalcommand util/org.kde.kpmcore.externalcommand.actions)
