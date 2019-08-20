@@ -26,7 +26,6 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
-#include <QThread>
 #include <QVariant>
 
 #include <memory>

@@ -344,7 +344,10 @@ void ExternalCommand::quit()
 
 bool ExternalCommand::startHelper()
 {
-    if (!QDBusConnection::systemBus().isConnected()) {
+    if (!QDBusConnection::systemBus().isConnected() /*||
+        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots) ||
+        !QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.helperinterface"))*/) {
+        qWarning() << "Error starting the helper application!!";
         qWarning() << QDBusConnection::systemBus().lastError().message();
         return false;
     }
@@ -360,9 +363,8 @@ bool ExternalCommand::startHelper()
     // initialize KDE Polkit daemon
     m_authJob->initPolkitAgent(QStringLiteral("org.kde.kpmcore.externalcommand.init"), parent);
 
-    // initialize and kick start the helper application
-    m_authJob->initHelper(QStringLiteral("org.kde.kpmcore.helperinterface"));
-    m_authJob->startHelper(QStringLiteral("org.kde.kpmcore.externalcommand.init"), QStringLiteral("org.kde.kpmcore.helperinterface"));
+    // Kick start the helper application
+    //m_authJob->startHelper(QStringLiteral("org.kde.kpmcore.externalcommand.init"), QStringLiteral("org.kde.kpmcore.helperinterface"));
     
     bool isActionAuthorized = m_authJob->authorizeAction(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
     

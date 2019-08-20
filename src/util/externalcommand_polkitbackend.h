@@ -56,15 +56,6 @@ public:
      * \brief Destructor of PolkitQt1Backend class
      */
    ~PolkitQt1Backend();
-    
-    /**
-     * \brief A function to check for the action's current status.
-     * 
-     * \param name Helper service name
-     *
-     * \return true if helper is initialized, otherwise false.
-     */
-     bool initHelper(const QString &helperName);
      
     /**
      * \brief A function to check for the action's current status.

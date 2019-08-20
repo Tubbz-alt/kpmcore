@@ -72,18 +72,6 @@ PolkitQt1Backend::~PolkitQt1Backend()
     
 }
 
-bool PolkitQt1Backend::initHelper(const QString &helperName)
-{
-    if (!QDBusConnection::systemBus().isConnected() || 
-        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots) ||
-        !QDBusConnection::systemBus().registerService(helperName)) {
-        qWarning() << "Helper initialization failed!!" << QDBusConnection::systemBus().lastError().message();
-        return false;
-    }
-
-    return true;
-}
-    
 void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID, int timeout /*10 days*/)
 {
     QDBusMessage message = QDBusMessage::createMethodCall(helperID, QStringLiteral("/Helper"), QStringLiteral("org.kde.kpmcore.externalcommand"), QStringLiteral("performAction"));
