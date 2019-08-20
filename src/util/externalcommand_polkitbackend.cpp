@@ -65,6 +65,7 @@ PolkitQt1Backend::PolkitQt1Backend()
     connect(Authority::instance(), &Authority::consoleKitDBChanged, this, &Auth::PolkitQt1Backend::authStatusChanged); 
 
     m_flyingActions = true;
+    PolkitQt1::Authority::instance()->enumerateActions();
 }
 
 PolkitQt1Backend::~PolkitQt1Backend()
@@ -72,28 +73,17 @@ PolkitQt1Backend::~PolkitQt1Backend()
     
 }
 
-void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID, int timeout /*10 days*/)
+void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID)
 {
-    QDBusMessage message = QDBusMessage::createMethodCall(helperID, QStringLiteral("/Helper"), QStringLiteral("org.kde.kpmcore.externalcommand"), QStringLiteral("performAction"));
-
-    const QByteArray caller = QDBusConnection::systemBus().baseService().toUtf8();
-    QList<QVariant> args;
-    args << action << caller;
-    message.setArguments(args);
-
-    QDBusPendingCall pendingCall = QDBusConnection::systemBus().asyncCall(message, timeout);
-
-    auto watcher = new QDBusPendingCallWatcher(pendingCall);
-
-    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, action, watcher]() {
-        watcher->deleteLater();
-
-        const QDBusMessage reply = watcher->reply();
-
-        if (reply.type() == QDBusMessage::ErrorMessage) {
-            qWarning() << "Failed to contact the helper, Error message:" << reply.errorMessage();
-        }
-    });
+    Q_UNUSED(action)
+    
+    const auto reply = QDBusConnection::systemBus().interface()->startService(helperID);
+    
+    if (!reply.isValid() && !QDBusConnection::systemBus().interface()->isServiceRegistered(helperID)) {
+        qWarning() << QDBusConnection::systemBus().lastError().message();
+        qWarning() << "Failure starting the helper";
+        return;
+    }
 }
 
 void PolkitQt1Backend::initPolkitAgent(const QString &action, QWidget *parent /*= nullptr*/) const
@@ -140,7 +130,7 @@ Authority::Result PolkitQt1Backend::actionStatus(const QString &action, const QB
     
     auto authority = Authority::instance();
     
-    PolkitEventLoop::m_result = authority->checkAuthorizationSync(action, subject, Authority::AllowUserInteraction);
+    PolkitEventLoop::m_result = authority->checkAuthorizationSync(action, subject, Authority::None);
 
     if (authority->hasError()) {
         qDebug() << "Encountered error while checking action status, Error code:" << authority->lastError() << "\n";
@@ -166,7 +156,7 @@ bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &
     event.processEvents();
     
     connect(authority, &Authority::checkAuthorizationFinished, &event, &PolkitEventLoop::requestQuit);
-    authority->checkAuthorization(action, subject, Authority::AllowUserInteraction);
+    authority->checkAuthorization/*Sync*/(action, subject, Authority::AllowUserInteraction);
     
     event.exec();
 

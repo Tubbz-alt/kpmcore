@@ -344,9 +344,7 @@ void ExternalCommand::quit()
 
 bool ExternalCommand::startHelper()
 {
-    if (!QDBusConnection::systemBus().isConnected() /*||
-        !QDBusConnection::systemBus().registerObject(QStringLiteral("/Helper"), this, QDBusConnection::ExportAllSlots) ||
-        !QDBusConnection::systemBus().registerService(QStringLiteral("org.kde.kpmcore.helperinterface"))*/) {
+    if (!QDBusConnection::systemBus().isConnected()) {
         qWarning() << "Error starting the helper application!!";
         qWarning() << QDBusConnection::systemBus().lastError().message();
         return false;
@@ -357,27 +355,24 @@ bool ExternalCommand::startHelper()
     if (iface.isValid()) {
         exit(0);
     }
-    
+
     /** Authorize using Polkit backend **/  
     
     // initialize KDE Polkit daemon
     m_authJob->initPolkitAgent(QStringLiteral("org.kde.kpmcore.externalcommand.init"), parent);
 
     // Kick start the helper application
-    //m_authJob->startHelper(QStringLiteral("org.kde.kpmcore.externalcommand.init"), QStringLiteral("org.kde.kpmcore.helperinterface"));
+    m_authJob->startHelper(QStringLiteral("org.kde.kpmcore.externalcommand.init"), QStringLiteral("org.kde.kpmcore.externalcommand"));
     
     bool isActionAuthorized = m_authJob->authorizeAction(QStringLiteral("org.kde.kpmcore.externalcommand.init"), m_authJob->callerID());
     
     // Wait until ExternalCommand Helper is ready and sends signal(Connect to newData signal)
     QEventLoop loop;
     auto exitLoop = [&] () { loop.exit(); };
-    
-    ExternalCommand cmd;
-    auto conn = QObject::connect(&cmd, &ExternalCommand::newData, exitLoop);
+
+    connect(this, &ExternalCommand::newData, exitLoop);
     
     loop.exec();
-    
-    QObject::disconnect(conn);
 
     if (!isActionAuthorized) {
         qDebug() << "Unable to obtain Administrative privileges, the action can not be executed!!";

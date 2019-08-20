@@ -64,7 +64,7 @@ public:
      * \param helperID Helper service name
      * 
      */
-     void startHelper(const QString &action, const QString &helperID, int timeout = 10 * 24 * 3600 * 1000 /*10 days*/);
+     void startHelper(const QString &action, const QString &helperID);
    
     /**
      * \brief Initializes the KDE Polkit Authentication Agent.
