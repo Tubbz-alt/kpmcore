@@ -56,5 +56,4 @@ install( FILES util/org.kde.kpmcore.helperinterface.conf DESTINATION ${KDE_INSTA
 install( FILES util/org.kde.kpmcore.applicationinterface.conf DESTINATION ${KDE_INSTALL_DBUSDIR}/system.d )
 install( FILES util/org.kde.kpmcore.externalcommand.service DESTINATION ${DBUS_SYSTEM_SERVICES_INSTALL_DIR} )
 
-#kauth_install_helper_files(kpmcore_externalcommand org.kde.kpmcore.externalcommand root)
 kauth_install_actions(org.kde.kpmcore.externalcommand util/org.kde.kpmcore.externalcommand.actions)
