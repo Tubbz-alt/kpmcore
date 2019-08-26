@@ -4,7 +4,7 @@
 # how to use the library, how to perform common tasks.
 
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
-SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)  # To get at KPMcore headers
@@ -20,8 +20,13 @@ target_link_libraries(testhelpers)
 
 macro (kpm_test name)
     add_executable(${name} ${ARGN})
-    target_link_libraries(${name} testhelpers kpmcore Qt5::Core)
+    target_link_libraries(${name} testhelpers kpmcore Qt5::Core Qt5::DBus Qt5::Test ${POLKITQT-1_LIBRARIES})
 endmacro()
+
+if(NOT Qt5Test_FOUND)
+    message(STATUS "Qt5Test not found, testpolkitauthbackend will not be built.")
+    return()
+endif()
 
 ###
 #
@@ -66,3 +71,11 @@ add_test(NAME testsmart COMMAND testsmart ${BACKEND})
 # Test Device
 kpm_test(testdevice testdevice.cpp)
 add_test(NAME testdevice COMMAND testdevice ${BACKEND})
+
+
+# Include Polkit-Qt1 backend files reference
+set(POLKITBACKEND ${CMAKE_SOURCE_DIR}/src/util/externalcommand_polkitbackend.cpp)
+
+# Test PolkitQt-1 Authorization Backend
+kpm_test(testpolkitauthbackend testpolkitauthbackend.cpp ${POLKITBACKEND})
+add_test(NAME testpolkitauthbackend COMMAND testpolkitauthbackend ${BACKEND})
