@@ -42,17 +42,12 @@ TestPolkitAuthBackend::~TestPolkitAuthBackend()
 
 void TestPolkitAuthBackend::startHelper(const QString &action, const QString &helperID) const
 {
-    Q_UNUSED(action)
-    
     PolkitQt1Backend *m_authJob = new PolkitQt1Backend;
     m_authJob->startHelper(action, helperID);
 }
 
 void TestPolkitAuthBackend::initAgent(const QString &action, QWidget *parent/* = nullptr*/) const
 {
-    Q_UNUSED(action)
-    Q_UNUSED(parent)
-    
     PolkitQt1Backend *m_authJob = new PolkitQt1Backend;
     m_authJob->initPolkitAgent(action, parent);
 }
