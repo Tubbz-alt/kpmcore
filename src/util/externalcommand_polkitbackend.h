@@ -58,13 +58,13 @@ public:
    ~PolkitQt1Backend();
      
     /**
-     * \brief A function to check for the action's current status.
+     * \brief A function to kick start the helper application.
      * 
      * \param action Action name
      * \param helperID Helper service name
      * 
      */
-     void startHelper(const QString &action, const QString &helperID);
+     void startHelper(const QString &action, const QString &helperID) const;
    
     /**
      * \brief Initializes the KDE Polkit Authentication Agent.

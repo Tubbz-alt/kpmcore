@@ -73,7 +73,7 @@ PolkitQt1Backend::~PolkitQt1Backend()
     
 }
 
-void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID)
+void PolkitQt1Backend::startHelper(const QString &action, const QString &helperID) const
 {
     Q_UNUSED(action)
     
@@ -156,7 +156,7 @@ bool PolkitQt1Backend::authorizeAction(const QString &action, const QByteArray &
     event.processEvents();
     
     connect(authority, &Authority::checkAuthorizationFinished, &event, &PolkitEventLoop::requestQuit);
-    authority->checkAuthorization/*Sync*/(action, subject, Authority::AllowUserInteraction);
+    authority->checkAuthorizationSync(action, subject, Authority::AllowUserInteraction);
     
     event.exec();
 
